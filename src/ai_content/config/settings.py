@@ -90,7 +90,7 @@ class KlingSettings(BaseSettings):
     max_poll_attempts: int = 30
 
     model_config = SettingsConfigDict(
-        env_prefix="KLINGAI_",
+        env_file=".env",
         extra="ignore",
     )
 
