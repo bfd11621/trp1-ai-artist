@@ -253,7 +253,12 @@ async def _generate_video(
     image: Optional[Path],
     output: Optional[Path],
 ):
-    """Async video generation."""
+    """Async video generation with job tracking."""
+    from ai_content.core.job_tracker import get_tracker, JobStatus
+    import shlex
+
+    tracker = get_tracker()
+
     # Apply preset if specified
     if style:
         try:
@@ -275,6 +280,12 @@ async def _generate_video(
 
     console.print(f"[blue]Generating with {provider}...[/blue]")
 
+    # Build command string for tracking
+    cmd_parts = ["ai-content", "video", "--prompt", shlex.quote(prompt), "--provider", provider]
+    if output:
+        cmd_parts.extend(["--output", str(output)])
+    command_str = " ".join(cmd_parts)
+
     # Generate
     first_frame = None
     if image and image.exists():
@@ -288,6 +299,24 @@ async def _generate_video(
         first_frame_url=first_frame,
         output_path=str(output) if output else None,
     )
+
+    # Track job - use output path basename or generate unique ID
+    if result.success and result.file_path:
+        job_id = f"veo_{Path(result.file_path).stem}"
+        tracker.create_job(
+            generation_id=job_id,
+            provider=provider,
+            content_type="video",
+            prompt=prompt,
+            command=command_str,
+            metadata={"aspect_ratio": aspect, "duration": duration},
+        )
+        tracker.update_status(
+            job_id,
+            JobStatus.DOWNLOADED,
+            output_path=str(result.file_path),
+        )
+        console.print(f"[dim]Job tracked: {job_id}[/dim]")
 
     _print_result(result)
 
@@ -436,10 +465,17 @@ def jobs(
     ),
     provider: Optional[str] = typer.Option(None, "--provider", "-p", help="Filter by provider"),
     limit: int = typer.Option(20, "--limit", "-l", help="Max number of results"),
+    sync: bool = typer.Option(False, "--sync", help="Sync pending jobs with API before listing"),
 ):
     """List tracked generation jobs."""
+    # Auto-sync if requested
+    if sync:
+        asyncio.run(_sync_jobs(job_id=None, download=False))
+        console.print("")  # Add spacing
+
     from ai_content.core.job_tracker import get_tracker, JobStatus
     from rich.table import Table
+    from datetime import datetime, timezone, timedelta
 
     tracker = get_tracker()
 
@@ -467,6 +503,9 @@ def jobs(
     table.add_column("Created", style="dim")
     table.add_column("Output", style="yellow", max_width=30)
 
+    # Stall threshold: 1 hour for processing jobs
+    stall_threshold = datetime.now(timezone.utc) - timedelta(hours=1)
+
     for job in job_list:
         # Color-code status
         status_str = job.status.value
@@ -475,7 +514,11 @@ def jobs(
         elif job.status == JobStatus.FAILED:
             status_str = f"[red]{status_str}[/red]"
         elif job.status in (JobStatus.QUEUED, JobStatus.PROCESSING):
-            status_str = f"[yellow]{status_str}[/yellow]"
+            # Check if potentially stalled
+            if job.created_at < stall_threshold:
+                status_str = f"[red]{status_str} (stalled?)[/red]"
+            else:
+                status_str = f"[yellow]{status_str}[/yellow]"
 
         table.add_row(
             job.id[:18] + "..." if len(job.id) > 20 else job.id,

@@ -68,6 +68,97 @@ uv run ai-content list-providers
 uv run ai-content list-presets
 ```
 
+## 🎨 Thoughtful Content Generation Guide
+
+### Music Generation Best Practices
+
+**1. Craft Descriptive Prompts**
+```bash
+# ❌ Too vague
+uv run ai-content music --prompt "nice music" --provider lyria
+
+# ✅ Rich and specific
+uv run ai-content music \
+  --prompt "Ethiopian Tizita scale meets Dominican bachata, warm acoustic guitar, nostalgic melancholy with romantic undertones, 95 BPM" \
+  --provider lyria \
+  --bpm 95
+```
+
+**2. Use Lyrics for Vocal Tracks (MiniMax)**
+```bash
+# Create structured lyrics with timing hints
+echo "[Verse 1]
+In the golden morning light
+Dreams take flight
+[Chorus]
+Rise above the clouds tonight" > lyrics.txt
+
+uv run ai-content music \
+  --prompt "Soulful R&B ballad with emotional vocals" \
+  --provider minimax \
+  --lyrics lyrics.txt
+```
+
+**3. Style Transfer with Reference Audio**
+```bash
+# Use a reference track to guide the style (MiniMax only)
+uv run ai-content music \
+  --prompt "Modern interpretation with electronic elements" \
+  --provider minimax \
+  --reference-url "https://example.com/reference.mp3"
+```
+
+### Video Generation Best Practices
+
+**1. Describe Motion and Atmosphere**
+```bash
+# ❌ Static description
+uv run ai-content video --prompt "mountain landscape" --provider veo
+
+# ✅ Dynamic with movement and mood
+uv run ai-content video \
+  --prompt "Drone shot ascending through misty mountains at golden hour, rays of sunlight breaking through clouds, cinematic slow motion" \
+  --provider veo \
+  --aspect 16:9
+```
+
+**2. Match Aspect Ratio to Purpose**
+```bash
+# Landscape for cinematic (16:9)
+uv run ai-content video --prompt "Epic landscape" --aspect 16:9 --provider veo
+
+# Portrait for social media (9:16)
+uv run ai-content video --prompt "Fashion model walking" --aspect 9:16 --provider veo
+
+# Square for thumbnails (1:1)
+uv run ai-content video --prompt "Product showcase" --aspect 1:1 --provider veo
+```
+
+### Complete Music Video Workflow
+
+```bash
+# Step 1: Generate music with meaningful lyrics
+uv run ai-content music \
+  --prompt "Ethiopian Tizita Dominican Bachata fusion, romantic nostalgic" \
+  --provider minimax \
+  --lyrics data/my_lyrics.txt \
+  --output output/my_track.mp3
+
+# Step 2: Generate complementary video
+uv run ai-content video \
+  --prompt "Ethiopian-Dominican fusion dance, warm golden hour lighting, intimate couple dancing bachata" \
+  --provider veo \
+  --output output/my_video.mp4
+
+# Step 3: Merge audio and video (requires ffmpeg)
+ffmpeg -i output/my_video.mp4 -i output/my_track.mp3 \
+  -c:v copy -c:a aac -shortest \
+  output/final_music_video.mp4
+
+# Step 4: Track your jobs
+uv run ai-content jobs --sync
+```
+
 ## 📦 Package Structure
 
 ```
@@ -209,12 +300,16 @@ uv run ai-content music-status <generation_id> \
 # List all jobs
 uv run ai-content jobs
 
+# List with live sync (queries APIs for pending jobs)
+uv run ai-content jobs --sync
+
 # Filter by status
 uv run ai-content jobs --status queued
 uv run ai-content jobs --status completed
 
 # Filter by provider
 uv run ai-content jobs --provider minimax
+uv run ai-content jobs --provider veo
 
 # View statistics
 uv run ai-content jobs-stats
@@ -225,6 +320,10 @@ uv run ai-content jobs-sync
 # Sync and auto-download completed
 uv run ai-content jobs-sync --download
 ```
+
+### Stall Detection
+
+Jobs that remain in `processing` or `queued` status for more than 1 hour are automatically marked as potentially stalled with a `(stalled?)` indicator. This helps identify jobs that may need manual intervention.
 
 ### Duplicate Prevention
 

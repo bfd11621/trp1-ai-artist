@@ -139,7 +139,25 @@ class GoogleVeoProvider:
 
             # Get video data
             video = operation.response.generated_videos[0]
-            video_data = video.video.video_bytes
+            video_data = None
+
+            # Try to get video bytes directly first
+            if hasattr(video.video, "video_bytes") and video.video.video_bytes:
+                video_data = video.video.video_bytes
+                logger.debug("   Got video from video_bytes")
+            # Fallback: download from URI if bytes not available
+            elif hasattr(video.video, "uri") and video.video.uri:
+                video_uri = video.video.uri
+                logger.info("   Downloading video from URI...")
+                video_data = await self._download_from_uri(video_uri)
+                logger.debug(f"   Downloaded {len(video_data)} bytes from URI")
+            else:
+                return GenerationResult(
+                    success=False,
+                    provider=self.name,
+                    content_type="video",
+                    error="No video data or URI available in response",
+                )
 
             # Save
             if output_path:
@@ -182,5 +200,18 @@ class GoogleVeoProvider:
 
         async with httpx.AsyncClient() as client:
             response = await client.get(url)
+            response.raise_for_status()
+            return response.content
+
+    async def _download_from_uri(self, uri: str) -> bytes:
+        """Download video from Veo's generated URI."""
+        import httpx
+
+        # Append API key to the URI for authentication
+        api_key = self.settings.api_key
+        download_url = f"{uri}&key={api_key}" if "?" in uri else f"{uri}?key={api_key}"
+
+        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
+            response = await client.get(download_url)
             response.raise_for_status()
             return response.content
