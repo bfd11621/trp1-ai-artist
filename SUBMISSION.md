@@ -83,3 +83,58 @@ Environment setup completed successfully
 **Command executed:**
 ```bash
 uv run ai-content music --provider lyria --style jazz --prompt "Smooth jazz instrumental, relaxing and warm" --duration 30
+
+MiniMax Vocals Attempt
+
+Command executed:
+
+uv run ai-content music --provider minimax --prompt "Ethiopian jazz fusion with vocals" --lyrics my_lyrics.txt --duration 30
+
+
+Observed behavior:
+
+Lyrics file loaded successfully
+
+CLI connected to MiniMax
+
+Streaming attempted for 30 seconds
+
+Error returned:
+
+{'name': 'ForbiddenException', 'message': 'Complete verification to using the API https://aimlapi.com/app/verification', 'data': {'kind': 'err_unverified_card'}}
+
+
+Analysis:
+
+Environment and CLI working correctly
+
+Failure caused by provider verification requirement, not your setup
+
+Outcome: Attempt documented properly
+
+Veo Video Attempt
+
+Command executed:
+
+uv run ai-content video --provider veo --style nature --prompt "Beautiful Ethiopian landscapes with mountains, rivers, and traditional villages" --duration 5
+
+
+Observed behavior:
+
+Preset nature used
+
+CLI connected to Veo
+
+Streaming attempted for 5 seconds
+
+Error returned:
+
+429 RESOURCE_EXHAUSTED
+{'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details.'}}
+
+
+Analysis:
+
+Environment and CLI fully functional
+
+Failure caused by API quota limit, not local setup
