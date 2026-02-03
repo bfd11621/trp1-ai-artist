@@ -78,11 +78,8 @@ Environment setup completed successfully
 
 ## Part 3: Content Generation
 
-### Lyria Music Attempt
+### Lyria Music Attempt – Success
 
-**Command:**
+**Command executed:**
 ```bash
-uv run ai-content music \
-  --provider lyria \
-  --prompt "Ethiopian jazz inspired by Mulatu Astatke, vibraphone-led, instrumental" \
-  --duration 30
+uv run ai-content music --provider lyria --style jazz --prompt "Smooth jazz instrumental, relaxing and warm" --duration 30
